@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SmartToken Bank — Queue Notification System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060d1a;--surface:#0d1829;--card:#111f35;--border:#1e3250;
+  --teal:#00c9a7;--teal2:#009e84;--gold:#f0b429;--gold2:#c8922a;
+  --red:#ff4d6d;--blue:#4a9eff;
+  --text:#e8f0fe;--muted:#6b84a8;--soft:#8fa8c8;
+  --radius:14px;--shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 10%,rgba(0,201,167,.1) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 85% 85%,rgba(240,180,41,.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,201,167,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,201,167,.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+
+/* ─── PAGES ─── */
+.page{display:none;position:relative;z-index:1;min-height:100vh}
+.page.active{display:flex}
+
+/* ─── AUTH PAGE ─── */
+#authPage{align-items:center;justify-content:center;padding:2rem}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:2.8rem 2.4rem;width:min(430px,100%);box-shadow:var(--shadow),0 0 0 1px rgba(0,201,167,.06);position:relative;overflow:hidden}
+.auth-card::before{content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(0,201,167,.12),transparent 70%);pointer-events:none}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;text-align:center;margin-bottom:.3rem}
+.auth-logo span{color:var(--teal)}
+.auth-logo em{color:var(--gold);font-style:normal}
+.auth-subtitle{text-align:center;font-size:.8rem;color:var(--muted);margin-bottom:2rem;letter-spacing:.3px}
+.tab-row{display:flex;background:var(--card);border-radius:10px;padding:4px;gap:4px;margin-bottom:2rem}
+.tab{flex:1;text-align:center;padding:.55rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;color:var(--muted);transition:all .2s;border:none;background:transparent}
+.tab.active{background:var(--teal);color:#060d1a}
+.form-group{margin-bottom:1.2rem}
+label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:.45rem}
+input,select{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:.78rem 1rem;border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s}
+input::placeholder{color:var(--muted)}
+input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,201,167,.12)}
+select option{background:var(--card)}
+.btn{width:100%;padding:.85rem;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;margin-top:.5rem}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#060d1a;box-shadow:0 4px 16px rgba(0,201,167,.25)}
+.btn-teal:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,201,167,.35)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#060d1a}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,180,41,.3)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--teal);color:var(--teal)}
+.btn-red{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);color:var(--red)}
+.btn-red:hover{background:rgba(255,77,109,.2)}
+.auth-err{color:var(--red);font-size:.8rem;margin-top:.8rem;text-align:center;display:none}
+
+/* ─── MAIN APP ─── */
+#appPage{flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2.4rem;background:rgba(13,24,41,.85);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.topbar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem}
+.topbar-logo span{color:var(--teal)}
+.topbar-logo em{color:var(--gold);font-style:normal}
+.topbar-user{display:flex;align-items:center;gap:.8rem}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;color:#060d1a}
+.user-name{font-size:.85rem;font-weight:500}
+.user-role{font-size:.7rem;color:var(--muted)}
+.logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.4rem .9rem;border-radius:8px;cursor:pointer;font-size:.78rem;transition:all .2s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* NAV TABS */
+.nav-tabs{display:flex;gap:.5rem;padding:1.2rem 2.4rem .5rem;overflow-x:auto}
+.nav-tab{padding:.55rem 1.2rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;color:var(--muted);border:none;background:transparent;white-space:nowrap;transition:all .2s;border:1px solid transparent}
+.nav-tab.active{background:rgba(0,201,167,.12);color:var(--teal);border-color:rgba(0,201,167,.25)}
+.nav-tab:hover:not(.active){color:var(--text);border-color:var(--border)}
+
+/* PANELS */
+.panel{display:none;padding:1.5rem 2.4rem 3rem}
+.panel.active{display:block}
+
+/* ─── TOKEN FORM ─── */
+.panel-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;margin-bottom:.3rem}
+.panel-sub{color:var(--muted);font-size:.88rem;margin-bottom:2rem}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;max-width:600px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:560px){.form-row{grid-template-columns:1fr}}
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem;margin-bottom:1.5rem}
+.service-opt{border:1px solid var(--border);border-radius:10px;padding:.9rem .7rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--card)}
+.service-opt:hover{border-color:var(--teal)}
+.service-opt.selected{border-color:var(--teal);background:rgba(0,201,167,.1)}
+.service-opt .s-icon{font-size:1.4rem;margin-bottom:.4rem}
+.service-opt .s-name{font-size:.75rem;font-weight:600;color:var(--soft)}
+
+/* TOKEN RESULT */
+.token-result{background:var(--card);border:1px solid rgba(0,201,167,.25);border-radius:14px;padding:2rem;text-align:center;margin-top:1.5rem;display:none;animation:popIn .4s ease}
+@keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.token-big{font-family:'Syne',sans-serif;font-size:4rem;font-weight:800;color:var(--gold);text-shadow:0 0 30px rgba(240,180,41,.4);line-height:1}
+.token-info-row{display:flex;justify-content:center;gap:2rem;margin-top:1rem;flex-wrap:wrap}
+.token-info-item{font-size:.8rem;color:var(--muted)}
+.token-info-item strong{display:block;color:var(--text);font-size:.95rem;margin-top:.2rem}
+.sms-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--teal);font-size:.78rem;padding:.4rem 1rem;border-radius:999px;margin-top:1rem}
+
+/* ─── QUEUE DASHBOARD ─── */
+.queue-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
+.live-badge{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--teal);font-weight:600;background:rgba(0,201,167,.1);padding:.3rem .8rem;border-radius:999px;border:1px solid rgba(0,201,167,.2)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.6)}}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.8rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem}
+.stat-card .s-val{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800}
+.stat-card .s-val.teal{color:var(--teal)}
+.stat-card .s-val.gold{color:var(--gold)}
+.stat-card .s-val.blue{color:var(--blue)}
+.stat-card .s-val.red{color:var(--red)}
+.stat-card .s-lbl{font-size:.75rem;color:var(--muted);margin-top:.2rem}
+
+.queue-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.queue-table-head{display:grid;grid-template-columns:80px 1fr 1fr 1fr 110px 120px;padding:.8rem 1.2rem;background:var(--card);font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;gap:.5rem}
+.queue-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr 110px 120px;padding:1rem 1.2rem;border-top:1px solid var(--border);font-size:.85rem;gap:.5rem;align-items:center;transition:background .15s}
+.queue-row:hover{background:rgba(255,255,255,.02)}
+.token-tag{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--gold)}
+.status-pill{padding:.25rem .7rem;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:inline-block;white-space:nowrap}
+.status-waiting{background:rgba(107,132,168,.15);color:var(--soft)}
+.status-alert{background:rgba(240,180,41,.15);color:var(--gold)}
+.status-called{background:rgba(0,201,167,.15);color:var(--teal)}
+.status-done{background:rgba(74,158,255,.1);color:var(--blue)}
+.action-btn{padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;border:none;margin-right:.3rem;font-family:'Syne',sans-serif;transition:all .15s}
+.act-call{background:rgba(0,201,167,.15);color:var(--teal)}
+.act-call:hover{background:rgba(0,201,167,.3)}
+.act-done{background:rgba(74,158,255,.12);color:var(--blue)}
+.act-done:hover{background:rgba(74,158,255,.25)}
+.act-skip{background:rgba(255,77,109,.1);color:var(--red)}
+.act-skip:hover{background:rgba(255,77,109,.2)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted)}
+.empty-state .e-icon{font-size:3rem;margin-bottom:.8rem}
+
+/* SMS LOG */
+.sms-log{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:420px;overflow-y:auto}
+.sms-log-head{padding:.8rem 1.4rem;background:var(--card);font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;position:sticky;top:0}
+.sms-item{padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:1rem;align-items:flex-start}
+.sms-item .sms-ico{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+.sms-item .sms-body{flex:1}
+.sms-item .sms-to{font-size:.72rem;color:var(--teal);font-weight:600;margin-bottom:.2rem}
+.sms-item .sms-msg{font-size:.82rem;color:var(--text);line-height:1.5}
+.sms-item .sms-ts{font-size:.68rem;color:var(--muted);margin-top:.3rem}
+.sms-type-10{border-left:3px solid var(--gold)}
+.sms-type-5{border-left:3px solid var(--teal)}
+.sms-type-now{border-left:3px solid var(--blue)}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.4rem;display:flex;align-items:center;gap:.8rem;font-size:.85rem;box-shadow:var(--shadow);z-index:999;transform:translateX(200%);transition:transform .3s ease;max-width:320px}
+.toast.show{transform:translateX(0)}
+.toast.success{border-color:rgba(0,201,167,.4)}
+.toast.warning{border-color:rgba(240,180,41,.4)}
+.toast.info{border-color:rgba(74,158,255,.4)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH PAGE ══════════════ -->
+<div id="authPage" class="page active">
+  <div class="auth-card">
+    <div class="auth-logo"><span>Smart</span><em>Token</em></div>
+    <div class="auth-subtitle">Bank Queue Notification System</div>
+
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="Enter your username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Enter your password"/>
+      </div>
+      <button class="btn btn-teal" onclick="doLogin()">Login →</button>
+      <div class="auth-err" id="loginErr">Invalid username or password.</div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="regName" placeholder="Your full name"/>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="regPhone" placeholder="+91 98765 43210"/>
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="regUser" placeholder="Choose a username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="Create a password"/>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="regRole">
+          <option value="customer">Customer</option>
+          <option value="admin">Bank Staff / Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-gold" onclick="doRegister()">Create Account →</button>
+      <div class="auth-err" id="regErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="appPage" class="page">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo"><span>Smart</span><em>Token</em> <span style="font-size:.7rem;color:var(--muted);font-family:'Instrument Sans',sans-serif;font-weight:400"> Bank</span></div>
+    <div class="topbar-user">
+      <div>
+        <div class="user-name" id="tbName">—</div>
+        <div class="user-role" id="tbRole">—</div>
+      </div>
+      <div class="avatar" id="tbAvatar">?</div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav-tabs" id="navTabs">
+    <button class="nav-tab active" onclick="showPanel('tokenPanel',this)">🎫 Get Token</button>
+    <button class="nav-tab" onclick="showPanel('queuePanel',this)">📋 Queue Board</button>
+    <button class="nav-tab" onclick="showPanel('smsPanel',this)">📲 SMS Alerts Log</button>
+    <button class="nav-tab admin-only" onclick="showPanel('adminPanel',this)" style="display:none">⚙️ Admin Controls</button>
+  </div>
+
+  <!-- ── GET TOKEN PANEL ── -->
+  <div id="tokenPanel" class="panel active">
+    <div class="panel-title">Generate Your Token</div>
+    <div class="panel-sub">Fill in your details to receive a queue token and SMS alert before your turn.</div>
+
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="tkName" placeholder="Your name"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="tkPhone" placeholder="+91 98765 43210"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Select Banking Service</label>
+        <div class="service-grid" id="serviceGrid">
+          <div class="service-opt" onclick="selectService(this,'Cash Deposit')"><div class="s-icon">💵</div><div class="s-name">Cash Deposit</div></div>
+          <div class="service-opt" onclick="selectService(this,'Cash Withdrawal')"><div class="s-icon">🏧</div><div class="s-name">Cash Withdrawal</div></div>
+          <div class="service-opt" onclick="selectService(this,'Account Opening')"><div class="s-icon">📂</div><div class="s-name">Account Opening</div></div>
+          <div class="service-opt" onclick="selectService(this,'Loan Enquiry')"><div class="s-icon">🏦</div><div class="s-name">Loan Enquiry</div></div>
+          <div class="service-opt" onclick="selectService(this,'Fixed Deposit')"><div class="s-icon">📈</div><div class="s-name">Fixed Deposit</div></div>
+          <div class="service-opt" onclick="selectService(this,'Cheque Services')"><div class="s-icon">📝</div><div class="s-name">Cheque Services</div></div>
+          <div class="service-opt" onclick="selectService(this,'KYC Update')"><div class="s-icon">🪪</div><div class="s-name">KYC Update</div></div>
+          <div class="service-opt" onclick="selectService(this,'General Enquiry')"><div class="s-icon">💬</div><div class="s-name">General Enquiry</div></div>
+        </div>
+        <input type="hidden" id="tkService" value=""/>
+      </div>
+
+      <div class="form-group">
+        <label>Alert Me Before (minutes)</label>
+        <select id="tkAlert">
+          <option value="10">10 minutes before my turn</option>
+          <option value="5">5 minutes before my turn</option>
+          <option value="both">Both (10 min + 5 min)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-gold" onclick="generateToken()" style="width:auto;padding:.8rem 2.2rem">🎫 Generate Token</button>
+
+      <!-- TOKEN RESULT -->
+      <div class="token-result" id="tokenResult">
+        <div style="font-size:.75rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:.5rem">Your Token Number</div>
+        <div class="token-big" id="resultTokenNum">B-001</div>
+        <div class="token-info-row">
+          <div class="token-info-item">Name<strong id="resultName">—</strong></div>
+          <div class="token-info-item">Service<strong id="resultService">—</strong></div>
+          <div class="token-info-item">Position<strong id="resultPos">—</strong></div>
+          <div class="token-info-item">Est. Wait<strong id="resultWait">—</strong></div>
+        </div>
+        <div class="sms-badge">📲 SMS alert scheduled to <span id="resultPhone" style="margin-left:.3rem;font-weight:600"></span></div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.8rem" id="resultAlertMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── QUEUE BOARD PANEL ── -->
+  <div id="queuePanel" class="panel">
+    <div class="queue-header">
+      <div>
+        <div class="panel-title">Live Queue Board</div>
+        <div class="panel-sub" style="margin-bottom:0">Real-time token status across all counters</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+        <div class="live-badge"><span class="live-dot"></span> Live</div>
+        <button class="btn btn-teal" style="width:auto;padding:.55rem 1.2rem;font-size:.82rem" onclick="refreshQueue()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="s-val teal" id="statTotal">0</div><div class="s-lbl">Total Tokens</div></div>
+      <div class="stat-card"><div class="s-val gold" id="statWaiting">0</div><div class="s-lbl">Waiting</div></div>
+      <div class="stat-card"><div class="s-val blue" id="statCalled">0</div><div class="s-lbl">Called / Serving</div></div>
+      <div class="stat-card"><div class="s-val" id="statDone" style="color:var(--soft)">0</div><div class="s-lbl">Completed</div></div>
+    </div>
+
+    <div class="queue-table-wrap">
+      <div class="queue-table-head">
+        <div>Token</div>
+        <div>Name</div>
+        <div>Phone</div>
+        <div>Service</div>
+        <div>Status</div>
+        <div>Actions</div>
+      </div>
+      <div id="queueBody"></div>
+    </div>
+  </div>
+
+  <!-- ── SMS LOG PANEL ── -->
+  <div id="smsPanel" class="panel">
+    <div class="panel-title">SMS Alert Log</div>
+    <div class="panel-sub">All SMS notifications sent to customers</div>
+    <div class="sms-log">
+      <div class="sms-log-head">📲 Sent Messages</div>
+      <div id="smsLogBody"></div>
+    </div>
+  </div>
+
+  <!-- ── ADMIN PANEL ── -->
+  <div id="adminPanel" class="panel">
+    <div class="panel-title">Admin Controls</div>
+    <div class="panel-sub">Manage queue settings and send bulk alerts</div>
+    <div class="form-card" style="max-width:500px">
+      <div class="form-group">
+        <label>Advance Alert Window</label>
+        <select id="adminAlertWindow">
+          <option value="10">10 minutes</option>
+          <option value="5">5 minutes</option>
+          <option value="both">Both (10 & 5 min)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Average Service Time per Token (minutes)</label>
+        <input type="number" id="adminServiceTime" value="7" min="1" max="30"/>
+      </div>
+      <div class="form-group">
+        <label>Branch Name</label>
+        <input type="text" id="adminBranch" value="Main Branch — Counter A"/>
+      </div>
+      <button class="btn btn-teal" style="width:auto;padding:.75rem 1.8rem" onclick="saveAdminSettings()">Save Settings</button>
+      <button class="btn btn-red" style="width:auto;padding:.75rem 1.8rem;margin-top:.8rem" onclick="clearQueue()">🗑 Clear Entire Queue</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   IN-MEMORY BACKEND
+══════════════════════════════════════════ */
+const DB = {
+  users: [
+    {username:'admin', password:'admin123', name:'Bank Admin', phone:'+91 99999 00001', role:'admin'},
+    {username:'staff', password:'staff123', name:'Bank Staff', phone:'+91 99999 00002', role:'admin'},
+  ],
+  tokens: [],
+  smsLog: [],
+  settings: { alertWindow:'both', serviceTime:7, branch:'Main Branch — Counter A' },
+  tokenSeq: 0,
+  currentUser: null
+};
+
+/* ══ COUNTER AUTO-ADVANCE (simulate queue movement) ══ */
+let autoAdvanceTimer = null;
+function startAutoAdvance(){
+  clearInterval(autoAdvanceTimer);
+  autoAdvanceTimer = setInterval(()=>{
+    const waiting = DB.tokens.filter(t=>t.status==='waiting');
+    if(!waiting.length) return;
+    // check if any token needs alert
+    waiting.forEach((t,idx)=>{
+      const pos = idx + 1;
+      const sw = DB.settings.serviceTime;
+      const minLeft = pos * sw;
+      if((DB.settings.alertWindow==='10'||DB.settings.alertWindow==='both') && minLeft<=10 && !t.alert10sent){
+        t.alert10sent=true;
+        sendSMS(t,'10min');
+      }
+      if((DB.settings.alertWindow==='5'||DB.settings.alertWindow==='both') && minLeft<=5 && !t.alert5sent){
+        t.alert5sent=true;
+        sendSMS(t,'5min');
+      }
+    });
+    // Also: per user's own chosen alert pref when generating
+    waiting.forEach((t,idx)=>{
+      const pos=idx+1;
+      const sw=DB.settings.serviceTime;
+      const minLeft=pos*sw;
+      if(t.alertPref==='10'&&minLeft<=10&&!t.alert10sent){t.alert10sent=true;sendSMS(t,'10min');}
+      if(t.alertPref==='5'&&minLeft<=5&&!t.alert5sent){t.alert5sent=true;sendSMS(t,'5min');}
+      if(t.alertPref==='both'){
+        if(minLeft<=10&&!t.alert10sent){t.alert10sent=true;sendSMS(t,'10min');}
+        if(minLeft<=5&&!t.alert5sent){t.alert5sent=true;sendSMS(t,'5min');}
+      }
+    });
+  }, 8000); // check every 8s (simulate time passing)
+}
+
+function sendSMS(token, type){
+  const msgs = {
+    '10min':`Dear ${token.name}, your SmartToken ${token.id} is approaching! Estimated wait: ~10 minutes. Please make your way to ${DB.settings.branch}. Service: ${token.service}.`,
+    '5min': `⚡ ALERT: ${token.name}, your token ${token.id} is just 5 minutes away! Please arrive at ${DB.settings.branch} — Counter is ready for: ${token.service}.`,
+    'now':  `✅ ${token.name}, token ${token.id} is NOW BEING CALLED at ${DB.settings.branch}. Please report to the counter immediately for: ${token.service}.`
+  };
+  const icons={'10min':'⏰','5min':'⚡','now':'📣'};
+  DB.smsLog.unshift({
+    to: token.phone, msg: msgs[type], type,
+    icon: icons[type], ts: new Date().toLocaleTimeString(), token: token.id
+  });
+  if(type==='10min') token.status='alert';
+  showToast(`📲 SMS sent to ${token.phone} (${type} alert)`, 'info');
+  renderSMSLog();
+  renderQueue();
+}
+
+/* ══ AUTH ══ */
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+}
+
+function doLogin(){
+  const u=v('loginUser'), p=v('loginPass');
+  const user = DB.users.find(x=>x.username===u && x.password===p);
+  if(!user){ show('loginErr'); return; }
+  hide('loginErr');
+  DB.currentUser=user;
+  enterApp();
+}
+
+function doRegister(){
+  const name=v('regName'),phone=v('regPhone'),user=v('regUser'),pass=v('regPass'),role=v('regRole');
+  if(!name||!phone||!user||!pass){ showErr('regErr','Please fill all fields.'); return; }
+  if(DB.users.find(x=>x.username===user)){ showErr('regErr','Username already taken.'); return; }
+  const newUser={username:user,password:pass,name,phone,role};
+  DB.users.push(newUser);
+  DB.currentUser=newUser;
+  hide('regErr');
+  showToast('Account created! Welcome 🎉','success');
+  enterApp();
+}
+
+function enterApp(){
+  const u=DB.currentUser;
+  document.getElementById('tbName').textContent=u.name;
+  document.getElementById('tbRole').textContent=u.role==='admin'?'Bank Staff / Admin':'Customer';
+  document.getElementById('tbAvatar').textContent=u.name[0].toUpperCase();
+  // Pre-fill token form
+  document.getElementById('tkName').value=u.name;
+  document.getElementById('tkPhone').value=u.phone;
+  // Show admin tab if admin
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=u.role==='admin'?'':'none');
+  document.getElementById('authPage').classList.remove('active');
+  document.getElementById('appPage').classList.add('active');
+  showPanel('tokenPanel', document.querySelector('.nav-tab'));
+  refreshQueue();
+  startAutoAdvance();
+}
+
+function doLogout(){
+  DB.currentUser=null;
+  clearInterval(autoAdvanceTimer);
+  document.getElementById('appPage').classList.remove('active');
+  document.getElementById('authPage').classList.add('active');
+  document.getElementById('tokenResult').style.display='none';
+  clearField('loginUser');clearField('loginPass');
+}
+
+/* ══ TOKEN GENERATION ══ */
+let selectedService='';
+function selectService(el,name){
+  document.querySelectorAll('.service-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedService=name;
+  document.getElementById('tkService').value=name;
+}
+
+function generateToken(){
+  const name=v('tkName'), phone=v('tkPhone'), service=selectedService, alertPref=v('tkAlert');
+  if(!name){showToast('Please enter your name','warning');return;}
+  if(!phone){showToast('Please enter your phone number','warning');return;}
+  if(!service){showToast('Please select a banking service','warning');return;}
+
+  DB.tokenSeq++;
+  const prefix=['A','B','C','D'][Math.floor((DB.tokenSeq-1)/25)%4];
+  const num=String(DB.tokenSeq).padStart(3,'0');
+  const tokenId=`${prefix}-${num}`;
+  const waitPos=DB.tokens.filter(t=>t.status==='waiting').length+1;
+  const estWait=waitPos*DB.settings.serviceTime;
+
+  const token={
+    id:tokenId, name, phone, service, alertPref,
+    status:'waiting', createdAt:new Date().toLocaleTimeString(),
+    alert10sent:false, alert5sent:false
+  };
+  DB.tokens.push(token);
+
+  // Show result
+  document.getElementById('resultTokenNum').textContent=tokenId;
+  document.getElementById('resultName').textContent=name;
+  document.getElementById('resultService').textContent=service;
+  document.getElementById('resultPos').textContent=`#${waitPos} in queue`;
+  document.getElementById('resultWait').textContent=`~${estWait} min`;
+  document.getElementById('resultPhone').textContent=phone;
+  const alertMap={'10':'10 min before','5':'5 min before','both':'at 10 min & 5 min before'};
+  document.getElementById('resultAlertMsg').textContent=`You will receive an SMS alert ${alertMap[alertPref]} your turn.`;
+  document.getElementById('tokenResult').style.display='block';
+
+  // Log initial SMS confirmation
+  DB.smsLog.unshift({
+    to:phone, icon:'🎫',
+    msg:`Hello ${name}! Your SmartToken is ${tokenId} for ${service} at ${DB.settings.branch}. Your position: #${waitPos}. Est. wait: ~${estWait} min. We will alert you before your turn.`,
+    type:'confirm', ts:new Date().toLocaleTimeString(), token:tokenId
+  });
+
+  renderQueue();
+  renderSMSLog();
+  showToast(`Token ${tokenId} generated! SMS confirmation sent.`,'success');
+}
+
+/* ══ QUEUE RENDERING ══ */
+function refreshQueue(){ renderQueue(); renderSMSLog(); }
+
+function renderQueue(){
+  const body=document.getElementById('queueBody');
+  const tokens=DB.tokens;
+  document.getElementById('statTotal').textContent=tokens.length;
+  document.getElementById('statWaiting').textContent=tokens.filter(t=>t.status==='waiting'||t.status==='alert').length;
+  document.getElementById('statCalled').textContent=tokens.filter(t=>t.status==='called').length;
+  document.getElementById('statDone').textContent=tokens.filter(t=>t.status==='done').length;
+
+  if(!tokens.length){
+    body.innerHTML=`<div class="empty-state"><div class="e-icon">🎫</div><div>No tokens generated yet.</div></div>`;
+    return;
+  }
+
+  const isAdmin=DB.currentUser?.role==='admin';
+  body.innerHTML=tokens.map((t,i)=>{
+    const statusMap={waiting:'status-waiting',alert:'status-alert',called:'status-called',done:'status-done'};
+    const labelMap={waiting:'Waiting',alert:'⚡ Alert Sent',called:'📣 Called',done:'✅ Done'};
+    const actions=isAdmin?`
+      <button class="action-btn act-call" onclick="callToken(${i})" ${t.status==='waiting'||t.status==='alert'?'':'disabled style="opacity:.3"'}>Call</button>
+      <button class="action-btn act-done" onclick="doneToken(${i})" ${t.status==='called'?'':'disabled style="opacity:.3"'}>Done</button>
+      <button class="action-btn act-skip" onclick="skipToken(${i})" ${t.status!=='done'?'':'disabled style="opacity:.3"'}>Skip</button>
+    `:'<span style="color:var(--muted);font-size:.75rem">—</span>';
+    return `<div class="queue-row">
+      <div class="token-tag">${t.id}</div>
+      <div>${t.name}</div>
+      <div style="font-size:.8rem;color:var(--muted)">${t.phone}</div>
+      <div style="font-size:.82rem">${t.service}</div>
+      <div><span class="status-pill ${statusMap[t.status]}">${labelMap[t.status]}</span></div>
+      <div>${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+function callToken(i){
+  const t=DB.tokens[i];
+  if(t.status==='done') return;
+  t.status='called';
+  sendSMS(t,'now');
+  renderQueue();
+  showToast(`Token ${t.id} called!`,'success');
+}
+function doneToken(i){
+  DB.tokens[i].status='done';
+  renderQueue();
+  showToast('Token marked as completed ✅','success');
+}
+function skipToken(i){
+  DB.tokens[i].status='done';
+  renderQueue();
+  showToast('Token skipped','warning');
+}
+function clearQueue(){
+  if(!confirm('Clear the entire queue? This cannot be undone.')) return;
+  DB.tokens=[];DB.tokenSeq=0;
+  renderQueue();showToast('Queue cleared','warning');
+}
+function saveAdminSettings(){
+  DB.settings.alertWindow=v('adminAlertWindow');
+  DB.settings.serviceTime=parseInt(v('adminServiceTime'))||7;
+  DB.settings.branch=v('adminBranch')||DB.settings.branch;
+  showToast('Settings saved ✅','success');
+}
+
+/* ══ SMS LOG ══ */
+function renderSMSLog(){
+  const body=document.getElementById('smsLogBody');
+  if(!DB.smsLog.length){
+    body.innerHTML=`<div class="empty-state"><div class="e-icon">📭</div><div>No SMS sent yet</div></div>`;
+    return;
+  }
+  const typeClass={'10min':'sms-type-10','5min':'sms-type-5','now':'sms-type-now','confirm':''};
+  body.innerHTML=DB.smsLog.map(s=>`
+    <div class="sms-item ${typeClass[s.type]||''}">
+      <div class="sms-ico">${s.icon}</div>
+      <div class="sms-body">
+        <div class="sms-to">To: ${s.to} &nbsp;·&nbsp; Token: ${s.token}</div>
+        <div class="sms-msg">${s.msg}</div>
+        <div class="sms-ts">${s.ts}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ══ UI HELPERS ══ */
+function showPanel(id, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='queuePanel') renderQueue();
+  if(id==='smsPanel') renderSMSLog();
+}
+
+let toastTimer;
+function showToast(msg, type='success'){
+  const icons={success:'✅',warning:'⚠️',info:'📲'};
+  document.getElementById('toastMsg').textContent=msg;
+  document.getElementById('toastIcon').textContent=icons[type]||'✅';
+  const t=document.getElementById('toast');
+  t.className='toast show '+type;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+function show(id){document.getElementById(id).style.display='block';}
+function hide(id){document.getElementById(id).style.display='none';}
+function clearField(id){document.getElementById(id).value='';}
+function showErr(id, msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+</script>
+</body>
+</html>
